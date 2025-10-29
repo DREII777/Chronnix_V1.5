@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { prisma } from "@/data/prisma";
+import { Resend } from "resend";
 
 const SESSION_COOKIE = "chronnix_session";
 
@@ -196,11 +197,38 @@ async function sendAuthCodeEmail(email: string, code: string) {
     return;
   }
 
-  if (!process.env.AUTH_EMAIL_SENDER || !process.env.AUTH_EMAIL_CLIENT) {
-    console.warn("AUTH_EMAIL_SENDER / AUTH_EMAIL_CLIENT non configurés. Aucun email envoyé.");
+  const sender = process.env.AUTH_EMAIL_SENDER;
+  const apiKey = process.env.RESEND_API_KEY ?? process.env.AUTH_EMAIL_CLIENT;
+
+  if (!sender || !apiKey) {
+    console.warn("AUTH_EMAIL_SENDER / RESEND_API_KEY non configurés. Aucun email envoyé.");
     return;
   }
 
-  // TODO: intégrer un service d'email (SendGrid, Resend, etc.)
-  console.log(`Code ${code} pour ${email}. Configurez un provider d'email.`);
+  const resend = new Resend(apiKey);
+
+  const subject = "Votre code de connexion Chronnix";
+  const textContent = `Voici votre code de connexion Chronnix : ${code}\n\nCe code expirera dans 10 minutes.`;
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #111827;">
+      <p>Bonjour,</p>
+      <p>Voici votre code de connexion Chronnix&nbsp;:</p>
+      <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${code}</p>
+      <p>Ce code expirera dans 10 minutes.</p>
+      <p>À bientôt,<br />L'équipe Chronnix</p>
+    </div>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: sender,
+      to: email,
+      subject,
+      text: textContent,
+      html: htmlContent,
+    });
+  } catch (error) {
+    console.error("sendAuthCodeEmail", error);
+    throw new Error("Impossible d'envoyer le code de connexion. Veuillez réessayer.");
+  }
 }

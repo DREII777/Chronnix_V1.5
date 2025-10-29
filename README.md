@@ -1,5 +1,12 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Authentication Email Setup
+
+Use [Resend](https://resend.com) to deliver OTP codes generated during login. Configure the following environment variables before running the application in production:
+
+- `RESEND_API_KEY` – API key issued by Resend (a fallback to `AUTH_EMAIL_CLIENT` is kept for backwards compatibility).
+- `AUTH_EMAIL_SENDER` – Verified sender address configured in Resend, e.g. `Chronnix <login@chronnix.app>`.
+
 ## Getting Started
 
 First, run the development server:
