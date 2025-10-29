@@ -1,0 +1,88 @@
+import { NextResponse } from "next/server";
+import { addTeamMember, removeTeamMember } from "@/data/teams";
+import { requireUser } from "@/lib/auth";
+
+type TeamWithMembers = {
+  id: number;
+  name: string;
+  members: Array<{
+    workerId: number;
+    role: string;
+    worker: {
+      id: number;
+      firstName: string;
+      lastName: string;
+      status: string;
+    };
+  }>;
+};
+
+async function resolveTeamId(context: { params: Promise<{ teamId: string }> }) {
+  const { teamId } = await context.params;
+  const id = Number(teamId);
+  if (Number.isNaN(id)) {
+    throw new Error("Identifiant d'équipe invalide");
+  }
+  return id;
+}
+
+function serializeTeam(team: TeamWithMembers | null) {
+  if (!team) return null;
+  return {
+    id: team.id,
+    name: team.name,
+    members: team.members.map((member) => ({
+      workerId: member.workerId,
+      role: member.role,
+      worker: {
+        id: member.worker.id,
+        firstName: member.worker.firstName,
+        lastName: member.worker.lastName,
+        status: member.worker.status,
+      },
+    })),
+  };
+}
+
+export async function POST(request: Request, context: { params: Promise<{ teamId: string }> }) {
+  let id: number;
+  try {
+    id = await resolveTeamId(context);
+  } catch {
+    return NextResponse.json({ error: "Identifiant d'équipe invalide" }, { status: 400 });
+  }
+
+  const body = (await request.json()) as { workerId?: number; role?: string };
+  if (!body.workerId) {
+    return NextResponse.json({ error: "workerId est requis" }, { status: 400 });
+  }
+
+  const user = await requireUser();
+  const team = await addTeamMember(user.accountId, id, body.workerId, body.role ?? "Membre");
+  if (!team) {
+    return NextResponse.json({ error: "Équipe introuvable" }, { status: 404 });
+  }
+
+  return NextResponse.json({ team: serializeTeam(team) });
+}
+
+export async function DELETE(request: Request, context: { params: Promise<{ teamId: string }> }) {
+  let id: number;
+  try {
+    id = await resolveTeamId(context);
+  } catch {
+    return NextResponse.json({ error: "Identifiant d'équipe invalide" }, { status: 400 });
+  }
+  const body = (await request.json()) as { workerId?: number };
+  if (!body.workerId) {
+    return NextResponse.json({ error: "workerId est requis" }, { status: 400 });
+  }
+
+  const user = await requireUser();
+  const team = await removeTeamMember(user.accountId, id, body.workerId);
+  if (!team) {
+    return NextResponse.json({ error: "Équipe introuvable" }, { status: 404 });
+  }
+
+  return NextResponse.json({ team: serializeTeam(team) });
+}

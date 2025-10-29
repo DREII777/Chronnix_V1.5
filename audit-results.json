@@ -1,0 +1,395 @@
+{
+  "baseUrl": "http://127.0.0.1:3100",
+  "auditedAt": "2025-10-06T22:56:13.661Z",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "routes": [
+    {
+      "name": "Dashboard",
+      "path": "/",
+      "url": "http://127.0.0.1:3100/",
+      "status": 200,
+      "timing": {
+        "requestTime": 847626.740394,
+        "proxyStart": -1,
+        "proxyEnd": -1,
+        "dnsStart": -1,
+        "dnsEnd": -1,
+        "connectStart": -1,
+        "connectEnd": -1,
+        "sslStart": -1,
+        "sslEnd": -1,
+        "workerStart": -1,
+        "workerReady": -1,
+        "workerFetchStart": -1,
+        "workerRespondWithSettled": -1,
+        "sendStart": 0.458,
+        "sendEnd": 0.5,
+        "pushStart": 0,
+        "pushEnd": 0,
+        "receiveHeadersStart": 178.992,
+        "receiveHeadersEnd": 179.346
+      },
+      "gotoError": null,
+      "consoleMessages": [
+        {
+          "type": "info",
+          "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+        }
+      ],
+      "pageErrors": [],
+      "layout": {
+        "navItems": [
+          {
+            "text": "Dashboard",
+            "href": "/",
+            "active": true,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition bg-slate-900 text-white shadow-lg"
+          },
+          {
+            "text": "Clients",
+            "href": "/clients",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Ouvriers",
+            "href": "/workers",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Pointage",
+            "href": "/timesheets",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Paramètres",
+            "href": "/settings",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          }
+        ],
+        "header": {
+          "height": 69,
+          "width": 1440,
+          "classes": "sticky top-0 z-50 border-b border-white/40 bg-white/75 backdrop-blur"
+        },
+        "pageTitle": "Dashboard",
+        "sectionSummaries": [],
+        "floatingButtons": []
+      }
+    },
+    {
+      "name": "Clients",
+      "path": "/clients",
+      "url": "http://127.0.0.1:3100/clients",
+      "status": 200,
+      "timing": {
+        "requestTime": 847628.000301,
+        "proxyStart": -1,
+        "proxyEnd": -1,
+        "dnsStart": -1,
+        "dnsEnd": -1,
+        "connectStart": -1,
+        "connectEnd": -1,
+        "sslStart": -1,
+        "sslEnd": -1,
+        "workerStart": -1,
+        "workerReady": -1,
+        "workerFetchStart": -1,
+        "workerRespondWithSettled": -1,
+        "sendStart": 0.257,
+        "sendEnd": 0.291,
+        "pushStart": 0,
+        "pushEnd": 0,
+        "receiveHeadersStart": 117.237,
+        "receiveHeadersEnd": 117.285
+      },
+      "gotoError": null,
+      "consoleMessages": [
+        {
+          "type": "info",
+          "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+        }
+      ],
+      "pageErrors": [],
+      "layout": {
+        "navItems": [
+          {
+            "text": "Dashboard",
+            "href": "/",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Clients",
+            "href": "/clients",
+            "active": true,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition bg-slate-900 text-white shadow-lg"
+          },
+          {
+            "text": "Ouvriers",
+            "href": "/workers",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Pointage",
+            "href": "/timesheets",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Paramètres",
+            "href": "/settings",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          }
+        ],
+        "header": {
+          "height": 69,
+          "width": 1440,
+          "classes": "sticky top-0 z-50 border-b border-white/40 bg-white/75 backdrop-blur"
+        },
+        "pageTitle": "Clients",
+        "sectionSummaries": [],
+        "floatingButtons": []
+      }
+    },
+    {
+      "name": "Workers",
+      "path": "/workers",
+      "url": "http://127.0.0.1:3100/workers",
+      "status": 200,
+      "timing": {
+        "requestTime": 847628.880577,
+        "proxyStart": -1,
+        "proxyEnd": -1,
+        "dnsStart": -1,
+        "dnsEnd": -1,
+        "connectStart": -1,
+        "connectEnd": -1,
+        "sslStart": -1,
+        "sslEnd": -1,
+        "workerStart": -1,
+        "workerReady": -1,
+        "workerFetchStart": -1,
+        "workerRespondWithSettled": -1,
+        "sendStart": 0.334,
+        "sendEnd": 0.359,
+        "pushStart": 0,
+        "pushEnd": 0,
+        "receiveHeadersStart": 167.957,
+        "receiveHeadersEnd": 168.028
+      },
+      "gotoError": null,
+      "consoleMessages": [
+        {
+          "type": "info",
+          "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+        }
+      ],
+      "pageErrors": [],
+      "layout": {
+        "navItems": [
+          {
+            "text": "Dashboard",
+            "href": "/",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Clients",
+            "href": "/clients",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Ouvriers",
+            "href": "/workers",
+            "active": true,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition bg-slate-900 text-white shadow-lg"
+          },
+          {
+            "text": "Pointage",
+            "href": "/timesheets",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Paramètres",
+            "href": "/settings",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          }
+        ],
+        "header": {
+          "height": 69,
+          "width": 1440,
+          "classes": "sticky top-0 z-50 border-b border-white/40 bg-white/75 backdrop-blur"
+        },
+        "pageTitle": "Ouvriers",
+        "sectionSummaries": [],
+        "floatingButtons": []
+      }
+    },
+    {
+      "name": "Timesheets",
+      "path": "/timesheets",
+      "url": "http://127.0.0.1:3100/timesheets",
+      "status": 200,
+      "timing": {
+        "requestTime": 847630.444368,
+        "proxyStart": -1,
+        "proxyEnd": -1,
+        "dnsStart": -1,
+        "dnsEnd": -1,
+        "connectStart": -1,
+        "connectEnd": -1,
+        "sslStart": -1,
+        "sslEnd": -1,
+        "workerStart": -1,
+        "workerReady": -1,
+        "workerFetchStart": -1,
+        "workerRespondWithSettled": -1,
+        "sendStart": 0.345,
+        "sendEnd": 0.374,
+        "pushStart": 0,
+        "pushEnd": 0,
+        "receiveHeadersStart": 314.375,
+        "receiveHeadersEnd": 314.427
+      },
+      "gotoError": null,
+      "consoleMessages": [
+        {
+          "type": "info",
+          "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+        }
+      ],
+      "pageErrors": [],
+      "layout": {
+        "navItems": [
+          {
+            "text": "Dashboard",
+            "href": "/",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Clients",
+            "href": "/clients",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Ouvriers",
+            "href": "/workers",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Pointage",
+            "href": "/timesheets",
+            "active": true,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition bg-slate-900 text-white shadow-lg"
+          },
+          {
+            "text": "Paramètres",
+            "href": "/settings",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          }
+        ],
+        "header": {
+          "height": 69,
+          "width": 1440,
+          "classes": "sticky top-0 z-50 border-b border-white/40 bg-white/75 backdrop-blur"
+        },
+        "pageTitle": "Pointage",
+        "sectionSummaries": [],
+        "floatingButtons": []
+      }
+    },
+    {
+      "name": "Settings",
+      "path": "/settings",
+      "url": "http://127.0.0.1:3100/settings",
+      "status": 200,
+      "timing": {
+        "requestTime": 847631.542014,
+        "proxyStart": -1,
+        "proxyEnd": -1,
+        "dnsStart": -1,
+        "dnsEnd": -1,
+        "connectStart": -1,
+        "connectEnd": -1,
+        "sslStart": -1,
+        "sslEnd": -1,
+        "workerStart": -1,
+        "workerReady": -1,
+        "workerFetchStart": -1,
+        "workerRespondWithSettled": -1,
+        "sendStart": 0.332,
+        "sendEnd": 0.365,
+        "pushStart": 0,
+        "pushEnd": 0,
+        "receiveHeadersStart": 73.541,
+        "receiveHeadersEnd": 73.586
+      },
+      "gotoError": null,
+      "consoleMessages": [
+        {
+          "type": "info",
+          "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+        }
+      ],
+      "pageErrors": [],
+      "layout": {
+        "navItems": [
+          {
+            "text": "Dashboard",
+            "href": "/",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Clients",
+            "href": "/clients",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Ouvriers",
+            "href": "/workers",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Pointage",
+            "href": "/timesheets",
+            "active": false,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          },
+          {
+            "text": "Paramètres",
+            "href": "/settings",
+            "active": true,
+            "classes": "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition bg-slate-900 text-white shadow-lg"
+          }
+        ],
+        "header": {
+          "height": 69,
+          "width": 1440,
+          "classes": "sticky top-0 z-50 border-b border-white/40 bg-white/75 backdrop-blur"
+        },
+        "pageTitle": "Paramètres",
+        "sectionSummaries": [],
+        "floatingButtons": []
+      }
+    }
+  ]
+}
