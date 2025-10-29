@@ -17,6 +17,7 @@ import { cn, formatCurrency } from "@/lib/utils";
 import { PeriodSwitcher } from "@/components/dashboard/period-switcher";
 import { subMonths } from "date-fns";
 import { ProjectSettingsModal, type ProjectSettings } from "@/components/projects/project-settings-modal";
+import { ExportDialog } from "@/components/timesheets/export-dialog";
 
 const STATUS = {
   WORKED: "WORKED" as const,
@@ -130,12 +131,6 @@ type EntryState = {
   note?: string | null;
 };
 
-const exportOptions: Array<{ value: "payroll" | "detail" | "global"; label: string }> = [
-  { value: "payroll", label: "Export Paie" },
-  { value: "detail", label: "Export Détail" },
-  { value: "global", label: "Export Global" },
-];
-
 export default function TimesheetDashboard({
   projects,
   projectId,
@@ -166,6 +161,10 @@ export default function TimesheetDashboard({
   const [rosterQuery, setRosterQuery] = useState("");
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [assigningTeamId, setAssigningTeamId] = useState<number | null>(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportKind, setExportKind] = useState<"payroll" | "detail" | "global">("payroll");
+  const [exportApplyPrintSetup, setExportApplyPrintSetup] = useState(true);
+  const [exportApplyColors, setExportApplyColors] = useState(true);
 
   const navigate = (nextProjectId: number, nextMonth: string) => {
     if (navigation.mode === "client") {
@@ -293,13 +292,31 @@ const workerDayTotals = useMemo(() => {
   );
   const averagePerWorker = assignedRoster.length > 0 ? totalHours / assignedRoster.length : 0;
 
-  const handleExport = (kind: "payroll" | "detail" | "global") => {
+  const handleConfirmExport = () => {
+    if (!projectId) {
+      push({
+        title: "Chantier requis",
+        description: "Sélectionnez un chantier avant de lancer un export.",
+        variant: "warning",
+      });
+      return;
+    }
+
     const query = new URLSearchParams({
       projectId: String(projectId),
       month,
-      kind,
+      kind: exportKind,
     });
+
+    if (!exportApplyPrintSetup) {
+      query.set("print", "false");
+    }
+    if (!exportApplyColors) {
+      query.set("colors", "false");
+    }
+
     window.location.href = `/api/timesheets/export?${query.toString()}`;
+    setExportDialogOpen(false);
   };
 
   const handleProjectChange = (nextId: number) => {
@@ -547,7 +564,20 @@ const workerDayTotals = useMemo(() => {
   ];
 
   return (
-    <div className="space-y-6 min-w-0">
+    <>
+      <ExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        selectedKind={exportKind}
+        onSelectKind={setExportKind}
+        applyPrintSetup={exportApplyPrintSetup}
+        onTogglePrintSetup={setExportApplyPrintSetup}
+        applyColors={exportApplyColors}
+        onToggleColors={setExportApplyColors}
+        onConfirm={handleConfirmExport}
+        confirmDisabled={!projectId}
+      />
+      <div className="space-y-6 min-w-0">
       <Card>
         <CardHeader className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -562,7 +592,10 @@ const workerDayTotals = useMemo(() => {
                 </Button>
               ) : null}
               <div className="ml-auto">
-                <ExportMenu onSelect={handleExport} />
+                <Button onClick={() => setExportDialogOpen(true)} className="gap-2" disabled={!projectId}>
+                  Exporter
+                  <span className="text-xs">▾</span>
+                </Button>
               </div>
             </div>
           </div>
@@ -908,6 +941,7 @@ const workerDayTotals = useMemo(() => {
         }}
       />
     </div>
+    </>
   );
 }
 
@@ -1315,40 +1349,6 @@ function WorkerRowCard({ slot, actionLabel, actionVariant, onAction, pending }: 
           {pending ? "…" : actionLabel}
         </Button>
       </div>
-    </div>
-  );
-}
-
-type ExportMenuProps = {
-  onSelect: (kind: "payroll" | "detail" | "global") => void;
-};
-
-function ExportMenu({ onSelect }: ExportMenuProps) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="relative">
-      <Button onClick={() => setOpen((prev) => !prev)} className="gap-2">
-        Exporter
-        <span className="text-xs">▾</span>
-      </Button>
-      {open ? (
-        <div className="absolute right-0 z-30 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-          {exportOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className="block w-full px-4 py-2 text-left text-sm text-slate-600 transition hover:bg-slate-100"
-              onClick={() => {
-                setOpen(false);
-                onSelect(option.value);
-              }}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }

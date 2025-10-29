@@ -2,36 +2,65 @@ import ExcelJS from "exceljs";
 import { Prisma, TimeEntryStatus } from "@prisma/client";
 import { prisma } from "@/data/prisma";
 import { getMonthDays, getMonthInterval } from "@/utils/date";
-import { sumDecimal } from "@/utils/timesheet";
+import { hoursToHHMM, sumDecimal, sumHHMM, toNumber } from "@/utils/timesheet";
 
-type ExportKind = "payroll" | "detail" | "global";
+export type ExportKind = "payroll" | "detail" | "global";
+
+export type TimesheetWorkbookOptions = {
+  applyPrintSetup: boolean;
+  applyColors: boolean;
+};
 
 type ExportParams = {
   projectId: number;
   month: string;
   kind: ExportKind;
+  options?: Partial<TimesheetWorkbookOptions>;
 };
 
-export async function generateTimesheetExport({ projectId, month, kind }: ExportParams) {
+type TimesheetSheetData = {
+  name: string;
+  rows: (string | number | null)[][];
+};
+
+type TimesheetWorkbookData = {
+  sheets: TimesheetSheetData[];
+};
+
+const DEFAULT_TIMESHEET_OPTIONS: TimesheetWorkbookOptions = {
+  applyPrintSetup: true,
+  applyColors: true,
+};
+
+const HEADER_FILL = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8F1FF" } } as const;
+const ZEBRA_FILL = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF7F7F8" } } as const;
+const BORDER = {
+  top: { style: "thin", color: { argb: "FFCBD5E1" } },
+  left: { style: "thin", color: { argb: "FFCBD5E1" } },
+  bottom: { style: "thin", color: { argb: "FFCBD5E1" } },
+  right: { style: "thin", color: { argb: "FFCBD5E1" } },
+} as const;
+
+export async function generateTimesheetExport({ projectId, month, kind, options }: ExportParams) {
   const dataset = await loadTimesheetDataset(projectId, month);
 
-  const workbook = new ExcelJS.Workbook();
-  workbook.created = new Date();
-
+  let sheetData: TimesheetSheetData[];
   switch (kind) {
     case "payroll":
-      buildPayrollSheet(workbook, dataset);
+      sheetData = [buildPayrollSheetData(dataset)];
       break;
     case "detail":
-      buildDetailSheet(workbook, dataset);
+      sheetData = [buildDetailSheetData(dataset)];
       break;
     case "global":
-      buildGlobalSheet(workbook, dataset);
+      sheetData = [buildGlobalSheetData(dataset)];
       break;
     default:
-      throw new Error(`Unsupported export kind: ${kind}`);
+      throw new Error(`Unsupported export kind: ${kind satisfies never}`);
   }
 
+  const workbook = buildTimesheetsWorkbook({ sheets: sheetData }, options);
+  applyPostFormatting(workbook, kind);
   return workbook;
 }
 
@@ -75,10 +104,12 @@ async function loadTimesheetDataset(projectId: number, month: string) {
     },
   });
 
-  const workers = project.assignments.map((assignment) => assignment.worker).sort((a, b) => {
-    if (a.lastName === b.lastName) return a.firstName.localeCompare(b.firstName);
-    return a.lastName.localeCompare(b.lastName);
-  });
+  const workers = project.assignments
+    .map((assignment) => assignment.worker)
+    .sort((a, b) => {
+      if (a.lastName === b.lastName) return a.firstName.localeCompare(b.firstName);
+      return a.lastName.localeCompare(b.lastName);
+    });
 
   const entryMap: EntryMap = new Map();
   for (const entry of entries) {
@@ -94,24 +125,22 @@ async function loadTimesheetDataset(projectId: number, month: string) {
   };
 }
 
-function buildPayrollSheet(workbook: ExcelJS.Workbook, dataset: Dataset) {
-  const sheet = workbook.addWorksheet("Paie", { properties: { tabColor: { argb: "FF1E3A8A" } } });
-  prepareWorksheet(sheet);
+function buildPayrollSheetData(dataset: Dataset): TimesheetSheetData {
+  type PayrollRow = [string, string, number | "—", string, number];
 
-  sheet.columns = [
-    { header: "Ouvrier", key: "worker", width: 28 },
-    { header: "Total heures", key: "hours", width: 18 },
-    { header: "Taux horaire", key: "rate", width: 16 },
-    { header: "Charges %", key: "charges", width: 14 },
-    { header: "Coût total", key: "cost", width: 18 },
+  const rows: (string | number | null)[][] = [
+    ["Ouvrier", "Heures", "Taux €/h", "Charges %", "Coût total €"],
   ];
+
+  const hourTotals: string[] = [];
+  let costTotal = 0;
 
   for (const worker of dataset.workers) {
     const totalHours = getTotalHoursForWorker(dataset, worker.id);
+    const hoursHHMM = hoursToHHMM(totalHours) || "00:00";
     const daysWorked = getWorkedDaysForWorker(dataset, worker.id);
     const rate = worker.payRate ? Number(worker.payRate) : 0;
-    const charges = worker.chargesPct ? Number(worker.chargesPct) : 0;
-    const baseCost = totalHours * rate * (1 + charges / 100);
+    const chargesPct = worker.chargesPct ? Number(worker.chargesPct) : 0;
 
     const hourlyExtras = (worker.additionalCosts ?? []).filter((cost) => cost.unit === "HOUR");
     const dailyExtras = (worker.additionalCosts ?? []).filter((cost) => cost.unit === "DAY");
@@ -119,96 +148,208 @@ function buildPayrollSheet(workbook: ExcelJS.Workbook, dataset: Dataset) {
     const hourlyExtraTotal = hourlyExtras.reduce((sum, cost) => sum + Number(cost.amount) * totalHours, 0);
     const dailyExtraTotal = dailyExtras.reduce((sum, cost) => sum + Number(cost.amount) * daysWorked, 0);
 
+    const baseCost = totalHours * rate * (1 + chargesPct / 100);
     const cost = baseCost + hourlyExtraTotal + dailyExtraTotal;
 
-    sheet.addRow({
-      worker: `${worker.lastName.toUpperCase()} ${worker.firstName}`,
-      hours: totalHours,
-      rate,
-      charges,
-      cost,
-    });
+    const row: PayrollRow = [
+      formatWorkerName(worker),
+      hoursHHMM,
+      rate > 0 ? Number(rate.toFixed(2)) : "—",
+      `${chargesPct.toFixed(2)}%`,
+      Number(cost.toFixed(2)),
+    ];
+
+    rows.push(row);
+    hourTotals.push(hoursHHMM);
+    costTotal += Number(cost.toFixed(2));
   }
 
-  addTotalsRow(sheet, { hours: true, cost: true });
-  formatNumberColumn(sheet, "hours", "0.00");
-  formatNumberColumn(sheet, "rate", "€0.00");
-  formatNumberColumn(sheet, "charges", "0.00%", (value) => value / 100);
-  formatNumberColumn(sheet, "cost", "€0.00");
+  rows.push(["TOTAL", sumHHMM(hourTotals), "—", "", Number(costTotal.toFixed(2))]);
+
+  return {
+    name: "Paie",
+    rows,
+  };
 }
 
-function buildDetailSheet(workbook: ExcelJS.Workbook, dataset: Dataset) {
-  const sheet = workbook.addWorksheet("Détail", { properties: { tabColor: { argb: "FF1E3A8A" } } });
-  prepareWorksheet(sheet);
-
-  const dayHeaders = dataset.days.map((day) => ({ header: day.key.slice(8, 10), key: day.key, width: 12 }));
-
-  sheet.columns = [
-    { header: "Ouvrier", key: "worker", width: 28 },
-    ...dayHeaders,
-    { header: "Total", key: "total", width: 14 },
-  ];
+function buildDetailSheetData(dataset: Dataset): TimesheetSheetData {
+  const headers = ["Ouvrier", ...dataset.days.map((day) => day.label), "Total"];
+  const rows: (string | number | null)[][] = [headers];
 
   for (const worker of dataset.workers) {
-    const row: Record<string, string | number> = {
-      worker: `${worker.lastName.toUpperCase()} ${worker.firstName}`,
-    };
-    const dailyValues: number[] = [];
+    const row: (string | number | null)[] = Array(headers.length).fill("");
+    row[0] = formatWorkerName(worker);
+    const dailyValues: string[] = [];
 
-    for (const day of dataset.days) {
+    dataset.days.forEach((day, index) => {
       const entry = dataset.entryMap.get(`${worker.id}:${day.key}`);
-      let value = 0;
-      if (entry) {
-        if (entry.status === TimeEntryStatus.ABSENT) {
-          row[day.key] = "ABS";
-        } else {
-          value = Number(entry.hours);
-          row[day.key] = value;
-        }
-      } else {
-        row[day.key] = "";
+      if (!entry) {
+        row[index + 1] = "";
+        return;
       }
-      dailyValues.push(value);
+      if (entry.status === TimeEntryStatus.ABSENT) {
+        row[index + 1] = "ABS";
+        return;
+      }
+      const hoursLabel = hoursToHHMM(entry.hours) || "";
+      row[index + 1] = hoursLabel;
+      if (hoursLabel) {
+        dailyValues.push(hoursLabel);
+      }
+    });
+
+    row[row.length - 1] = sumHHMM(dailyValues);
+    rows.push(row);
+  }
+
+  const bodyRows = rows.slice(1);
+  const totalRow: (string | number | null)[] = Array(headers.length).fill("");
+  totalRow[0] = "TOTAL";
+
+  dataset.days.forEach((_, index) => {
+    const values = bodyRows.map((row) => row[index + 1] as string | null | undefined);
+    totalRow[index + 1] = sumHHMM(values);
+  });
+
+  const totals = bodyRows.map((row) => row[row.length - 1] as string | null | undefined);
+  totalRow[headers.length - 1] = sumHHMM(totals);
+  rows.push(totalRow);
+
+  return {
+    name: "Détail",
+    rows,
+  };
+}
+
+function buildGlobalSheetData(dataset: Dataset): TimesheetSheetData {
+  const rows: (string | number | null)[][] = [["Ouvrier", "Total heures", "Jours prestés"]];
+  const hourTotals: string[] = [];
+  let dayTotal = 0;
+
+  for (const worker of dataset.workers) {
+    const totalHours = getTotalHoursForWorker(dataset, worker.id);
+    const daysWorked = getWorkedDaysForWorker(dataset, worker.id);
+    const hoursHHMM = hoursToHHMM(totalHours) || "00:00";
+
+    rows.push([formatWorkerName(worker), hoursHHMM, daysWorked]);
+    hourTotals.push(hoursHHMM);
+    dayTotal += daysWorked;
+  }
+
+  rows.push(["TOTAL", sumHHMM(hourTotals), dayTotal]);
+
+  return {
+    name: "Global",
+    rows,
+  };
+}
+
+function buildTimesheetsWorkbook(
+  data: TimesheetWorkbookData,
+  options: Partial<TimesheetWorkbookOptions> = {},
+): ExcelJS.Workbook {
+  const workbook = new ExcelJS.Workbook();
+  const resolved: TimesheetWorkbookOptions = { ...DEFAULT_TIMESHEET_OPTIONS, ...options };
+
+  data.sheets.forEach(({ name, rows }) => {
+    const worksheet = workbook.addWorksheet(name.slice(0, 31));
+    rows.forEach((row) => worksheet.addRow(row));
+
+    if (!rows.length) {
+      return;
     }
 
-    row.total = sumDecimal(dailyValues);
-    sheet.addRow(row);
-  }
+    const columnCount = rows[0]?.length ?? 0;
+    const rowCount = rows.length;
 
-  addTotalsRow(sheet, { total: true, dynamicDayKeys: dataset.days.map((day) => day.key) });
-  formatNumberColumn(sheet, "total", "0.00");
-  for (const day of dataset.days) {
-    formatNumberColumn(sheet, day.key, "0.00");
-  }
+    worksheet.views = [{ state: "frozen", xSplit: 1, ySplit: 1 }];
+
+    rows.forEach((row, rowIndex) => {
+      row.forEach((_, columnIndex) => {
+        const cell = worksheet.getCell(rowIndex + 1, columnIndex + 1);
+        cell.border = BORDER;
+        cell.alignment = {
+          vertical: "middle",
+          horizontal: rowIndex === 0 ? "center" : "left",
+          wrapText: true,
+        };
+
+        if (rowIndex === 0) {
+          cell.font = { bold: true };
+          if (resolved.applyColors) {
+            cell.fill = HEADER_FILL;
+          }
+        } else if (resolved.applyColors && rowIndex % 2 === 1) {
+          cell.fill = ZEBRA_FILL;
+        }
+      });
+    });
+
+    for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+      let maxLength = 4;
+      rows.forEach((row) => {
+        const value = row[columnIndex];
+        if (value === null || value === undefined) {
+          return;
+        }
+        const text = typeof value === "number" ? value.toString() : String(value);
+        maxLength = Math.max(maxLength, text.length);
+      });
+      worksheet.getColumn(columnIndex + 1).width = Math.min(40, maxLength + 2);
+    }
+
+    if (columnCount > 0 && rowCount > 0 && resolved.applyPrintSetup) {
+      const lastColumn = worksheet.getColumn(columnCount).letter;
+      worksheet.pageSetup.printArea = `A1:${lastColumn}${rowCount}`;
+      worksheet.pageSetup.printTitlesRow = "1:1";
+      worksheet.pageSetup.orientation = "landscape";
+      worksheet.pageSetup.fitToPage = true;
+      worksheet.pageSetup.fitToWidth = 1;
+      worksheet.pageSetup.fitToHeight = 1;
+      worksheet.pageSetup.horizontalCentered = true;
+      worksheet.pageSetup.verticalCentered = false;
+      worksheet.pageSetup.margins = {
+        left: 0.5,
+        right: 0.5,
+        top: 0.5,
+        bottom: 0.5,
+        header: 0.3,
+        footer: 0.3,
+      };
+    }
+  });
+
+  return workbook;
 }
 
-function buildGlobalSheet(workbook: ExcelJS.Workbook, dataset: Dataset) {
-  const sheet = workbook.addWorksheet("Global", { properties: { tabColor: { argb: "FF1E3A8A" } } });
-  prepareWorksheet(sheet);
+function applyPostFormatting(workbook: ExcelJS.Workbook, kind: ExportKind) {
+  workbook.worksheets.forEach((sheet) => {
+    sheet.eachRow((row) => {
+      const firstCell = row.getCell(1);
+      if (typeof firstCell.value === "string" && firstCell.value.trim().toUpperCase() === "TOTAL") {
+        row.font = { ...(row.font ?? {}), bold: true };
+      }
+    });
+  });
 
-  sheet.columns = [
-    { header: "Ouvrier", key: "worker", width: 28 },
-    { header: "Total heures", key: "hours", width: 18 },
-    { header: "Jours prestés", key: "days", width: 16 },
-  ];
+  if (kind === "payroll") {
+    const sheet = workbook.worksheets[0];
+    const rateColumn = sheet.getColumn(3);
+    rateColumn.eachCell({ includeEmpty: false }, (cell, rowNumber) => {
+      if (rowNumber === 1) return;
+      if (typeof cell.value === "number") {
+        cell.numFmt = "€0.00";
+      }
+    });
 
-  for (const worker of dataset.workers) {
-    const hours = getTotalHoursForWorker(dataset, worker.id);
-    const daysWorked = dataset.days.filter((day) => {
-      const entry = dataset.entryMap.get(`${worker.id}:${day.key}`);
-      if (!entry) return false;
-      return entry.status === TimeEntryStatus.WORKED && Number(entry.hours) > 0;
-    }).length;
-
-    sheet.addRow({
-      worker: `${worker.lastName.toUpperCase()} ${worker.firstName}`,
-      hours,
-      days: daysWorked,
+    const costColumn = sheet.getColumn(5);
+    costColumn.eachCell({ includeEmpty: false }, (cell, rowNumber) => {
+      if (rowNumber === 1) return;
+      if (typeof cell.value === "number") {
+        cell.numFmt = "€0.00";
+      }
     });
   }
-
-  addTotalsRow(sheet, { hours: true, days: true });
-  formatNumberColumn(sheet, "hours", "0.00");
 }
 
 function getTotalHoursForWorker(dataset: Dataset, workerId: number) {
@@ -228,115 +369,13 @@ function getWorkedDaysForWorker(dataset: Dataset, workerId: number) {
     const entry = dataset.entryMap.get(`${workerId}:${day.key}`);
     if (!entry) continue;
     if (entry.status !== TimeEntryStatus.WORKED) continue;
-    if (Number(entry.hours) <= 0) continue;
+    if (toNumber(entry.hours) <= 0) continue;
     days += 1;
   }
   return days;
 }
 
-function prepareWorksheet(sheet: ExcelJS.Worksheet) {
-  sheet.views = [{ state: "frozen", ySplit: 1 }];
-  const headerRow = sheet.getRow(1);
-  headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-  headerRow.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF1E3A8A" },
-  };
-  headerRow.alignment = { vertical: "middle", horizontal: "center" };
+function formatWorkerName(worker: Dataset["workers"][number]) {
+  return `${worker.lastName.toUpperCase()} ${worker.firstName}`;
 }
 
-function addTotalsRow(
-  sheet: ExcelJS.Worksheet,
-  options: {
-    hours?: boolean;
-    cost?: boolean;
-    days?: boolean;
-    total?: boolean;
-    dynamicDayKeys?: string[];
-  },
-) {
-  const totalRow = sheet.addRow({ worker: "Total" });
-  totalRow.font = { bold: true };
-
-  const rowNumber = totalRow.number;
-  const dataRangeStart = 2; // first data row after header
-  const dataRangeEnd = rowNumber - 1;
-
-  if (options.hours) {
-    totalRow.getCell("hours").value = {
-      formula: `SUM(B${dataRangeStart}:B${dataRangeEnd})`,
-    };
-  }
-
-  if (options.cost) {
-    totalRow.getCell("cost").value = {
-      formula: `SUM(E${dataRangeStart}:E${dataRangeEnd})`,
-    };
-  }
-
-  if (options.days) {
-    totalRow.getCell("days").value = {
-      formula: `SUM(C${dataRangeStart}:C${dataRangeEnd})`,
-    };
-  }
-
-  if (options.total) {
-    const column = columnLetterFromKey(sheet, "total");
-    if (column) {
-      totalRow.getCell("total").value = {
-        formula: `SUM(${column}${dataRangeStart}:${column}${dataRangeEnd})`,
-      };
-    }
-  }
-
-  if (options.dynamicDayKeys) {
-    options.dynamicDayKeys.forEach((dayKey) => {
-      const column = columnLetterFromKey(sheet, dayKey);
-      if (!column) return;
-      const cell = totalRow.getCell(dayKey);
-      cell.value = {
-        formula: `SUM(${column}${dataRangeStart}:${column}${dataRangeEnd})`,
-      };
-    });
-  }
-
-  sheet.getRow(rowNumber).border = {
-    top: { style: "thin", color: { argb: "FF1E3A8A" } },
-    bottom: { style: "double", color: { argb: "FF1E3A8A" } },
-  };
-}
-
-function columnLetterFromKey(sheet: ExcelJS.Worksheet, key: string) {
-  const column = sheet.columns.find((col) => col.key === key);
-  if (!column) return null;
-  const columnNumber = sheet.columns.indexOf(column) + 1;
-  return columnNumberToLetter(columnNumber);
-}
-
-function formatNumberColumn(
-  sheet: ExcelJS.Worksheet,
-  key: string,
-  format: string,
-  transform?: (value: number) => number,
-) {
-  const column = sheet.getColumn(key);
-  column.numFmt = format;
-  column.eachCell({ includeEmpty: false }, (cell, rowNumber) => {
-    if (rowNumber === 1) return;
-    if (typeof cell.value !== "number") return;
-    const nextValue = transform ? transform(cell.value) : cell.value;
-    cell.value = nextValue;
-  });
-}
-
-function columnNumberToLetter(columnNumber: number) {
-  let temp = columnNumber;
-  let letter = "";
-  while (temp > 0) {
-    const remainder = (temp - 1) % 26;
-    letter = String.fromCharCode(65 + remainder) + letter;
-    temp = Math.floor((temp - remainder) / 26);
-  }
-  return letter;
-}

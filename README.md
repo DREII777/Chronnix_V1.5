@@ -7,6 +7,12 @@ Use [Resend](https://resend.com) to deliver OTP codes generated during login. Co
 - `RESEND_API_KEY` – API key issued by Resend (a fallback to `AUTH_EMAIL_CLIENT` is kept for backwards compatibility).
 - `AUTH_EMAIL_SENDER` – Verified sender address configured in Resend, e.g. `Chronnix <login@chronnix.app>`.
 
+## Timesheet Exports
+
+- Export the payroll, detail or global workbook from the timesheet dashboard via the new “Exporter” modal.
+- Choose whether to keep the one-page landscape layout and coloured zebra styles before downloading.
+- The backend builds the Excel workbook with the same structure and styling rules as the Chronnix legacy reference (ExcelJS based builder).
+
 ## Getting Started
 
 First, run the development server:
